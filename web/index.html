@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Simple Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <h1>My Adafruit IO Dashboard</h1>
+    </header>
+
+    <main>
+        <div class="data-card" id="temperature-card">
+            <h2>Temperature</h2>
+            <p class="data-value">Loading...</p>
+        </div>
+
+        <div class="data-card" id="humidity-card">
+            <h2>Humidity</h2>
+            <p class="data-value">Loading...</p>
+        </div>
+
+        <div class="control-card" id="led-control-card">
+            <h2>LED Control</h2>
+            <button id="toggle-led-button">Toggle LED</button>
+            <p id="led-status">Status: Unknown</p>
+        </div>
+
+        </main>
+
+    <footer>
+        <p>&copy; 2025 My Simple Dashboard</p>
+    </footer>
+
+    <script>
+        // Basic JavaScript to fetch data from your Python backend
+        async function fetchData() {
+            try {
+                const temperatureResponse = await fetch('/api/temperature');
+                const temperatureData = await temperatureResponse.json();
+                document.querySelector('#temperature-card .data-value').textContent = `${temperatureData.value}°C`;
+
+                const humidityResponse = await fetch('/api/humidity');
+                const humidityData = await humidityResponse.json();
+                document.querySelector('#humidity-card .data-value').textContent = `${humidityData.value}%`;
+
+                // Example for LED status (assuming your backend provides this)
+                const ledStatusResponse = await fetch('/api/led/status');
+                const ledStatusData = await ledStatusResponse.json();
+                document.getElementById('led-status').textContent = `Status: ${ledStatusData.status}`;
+
+            } catch (error) {
+                console.error("Error fetching data:", error);
+                document.querySelector('#temperature-card .data-value').textContent = "Error loading";
+                document.querySelector('#humidity-card .data-value').textContent = "Error loading";
+                document.getElementById('led-status').textContent = "Error";
+            }
+        }
+
+        async function toggleLED() {
+            try {
+                const response = await fetch('/api/led/toggle', { method: 'POST' });
+                const result = await response.json();
+                if (result.status === 'success') {
+                    // Optionally update the LED status display
+                    fetchData(); // Re-fetch data to update status
+                } else {
+                    alert('Failed to toggle LED.');
+                }
+            } catch (error) {
+                console.error("Error toggling LED:", error);
+                alert('Error toggling LED.');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchData(); // Load initial data
+            setInterval(fetchData, 5000); // Update data every 5 seconds
+            const toggleLedButton = document.getElementById('toggle-led-button');
+            if (toggleLedButton) {
+                toggleLedButton.addEventListener('click', toggleLED);
+            }
+        });
+    </script>
+</body>
+</html>
