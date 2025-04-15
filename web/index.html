@@ -1,88 +1,258 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Simple Dashboard</title>
-    <link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Smart Home Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            padding: 20px;
+            max-width: 900px;
+            margin: auto;
+        }
+
+        header,
+        footer {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        h1,
+        h2 {
+            color: #333;
+        }
+
+        .device-grid {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            justify-content: space-between;
+        }
+
+        .control-card,
+        .data-card {
+            background: #fff;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .control-card {
+            flex: 1 1 calc(33% - 10px);
+            min-width: 250px;
+            box-sizing: border-box;
+            text-align: center;
+        }
+
+        .data-card {
+            margin-top: 20px;
+        }
+
+        .control-card button {
+            padding: 10px 18px;
+            font-size: 14px;
+            border: none;
+            border-radius: 5px;
+            color: #fff;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: background-color 0.3s;
+        }
+
+        .on {
+            background-color: #28a745;
+        }
+
+        .off {
+            background-color: #dc3545;
+        }
+
+        .status-text {
+            font-weight: bold;
+            margin-top: 8px;
+            font-size: 14px;
+        }
+
+        canvas {
+            max-width: 100%;
+        }
+
+        @media (max-width: 768px) {
+            .control-card {
+                flex: 1 1 100%;
+            }
+        }
+    </style>
 </head>
+
 <body>
     <header>
-        <h1>My Adafruit IO Dashboard</h1>
+        <h1>Smart Home Dashboard</h1>
     </header>
 
     <main>
-        <div class="data-card" id="temperature-card">
-            <h2>Temperature</h2>
-            <p class="data-value">Loading...</p>
+        <div class="device-grid">
+            <!-- Fan Control -->
+            <div class="control-card">
+                <h2>Fan</h2>
+                <button id="fan-toggle">Loading...</button>
+                <p class="status-text" id="fan-status">Status: ...</p>
+            </div>
+
+            <!-- Light Control -->
+            <div class="control-card">
+                <h2>Light</h2>
+                <button id="light-toggle">Loading...</button>
+                <p class="status-text" id="light-status">Status: ...</p>
+            </div>
+
+            <!-- Door Control -->
+            <div class="control-card">
+                <h2>Door</h2>
+                <button id="door-toggle">Loading...</button>
+                <p class="status-text" id="door-status">Status: ...</p>
+            </div>
         </div>
 
-        <div class="data-card" id="humidity-card">
-            <h2>Humidity</h2>
-            <p class="data-value">Loading...</p>
+        <!-- Temperature Chart -->
+        <div class="data-card">
+            <h2>Temperature Chart</h2>
+            <canvas id="tempChart"></canvas>
         </div>
-
-        <div class="control-card" id="led-control-card">
-            <h2>LED Control</h2>
-            <button id="toggle-led-button">Toggle LED</button>
-            <p id="led-status">Status: Unknown</p>
-        </div>
-
-        </main>
+    </main>
 
     <footer>
-        <p>&copy; 2025 My Simple Dashboard</p>
+        <p>&copy; 2025 Smart Home System</p>
     </footer>
 
     <script>
-        // Basic JavaScript to fetch data from your Python backend
+        let tempChart;
+        const tempData = {
+            labels: [],
+            datasets: [{
+                label: 'Temperature (°C)',
+                data: [],
+                borderColor: '#007bff',
+                fill: false,
+                tension: 0.1
+            }]
+        };
+
+        function updateChart(temp) {
+            const now = new Date().toLocaleTimeString();
+            tempData.labels.push(now);
+            tempData.datasets[0].data.push(temp);
+
+            if (tempData.labels.length > 10) {
+                tempData.labels.shift();
+                tempData.datasets[0].data.shift();
+            }
+
+            tempChart.update();
+        }
+
+        async function fetchFanData() {
+            try {
+                const fanStatus = await fetch('/api/fan/status');
+                const fanData = await fanStatus.json();
+                const fanState = fanData.value;
+                const fanBtn = document.getElementById('fan-toggle');
+                fanBtn.textContent = fanState === 'ON' ? 'Turn OFF Fan' : 'Turn ON Fan';
+                fanBtn.className = fanState === 'ON' ? 'on' : 'off';
+                document.getElementById('fan-status').textContent = `Status: ${fanState}`;
+            } catch (error) {
+                console.error("Fetch error:", error);
+            }
+        }
+        async function fetchLightData() {
+            try {
+                const lightStatus = await fetch('/api/light/status');
+                const lightData = await lightStatus.json();
+                const lightState = lightData.value;
+                const lightBtn = document.getElementById('light-toggle');
+                lightBtn.textContent = lightState === 'ON' ? 'Turn OFF Light' : 'Turn ON Light';
+                lightBtn.className = lightState === 'ON' ? 'on' : 'off';
+                document.getElementById('light-status').textContent = `Status: ${lightState}`;
+
+            } catch (error) {
+                console.error("Fetch error:", error);
+            }
+        }
+        async function fetchDoorData() {
+            try {
+                const doorStatus = await fetch('/api/door/status');
+                const doorData = await doorStatus.json();
+                const doorState = doorData.value;
+                const doorBtn = document.getElementById('door-toggle');
+                doorBtn.textContent = doorState === 'ON' ? 'Close Door' : 'Open Door';
+                doorBtn.className = doorState === 'ON' ? 'on' : 'off';
+                document.getElementById('door-status').textContent = `Status: ${doorState}`;
+            } catch (error) {
+                console.error("Fetch error:", error);
+            }
+        }
         async function fetchData() {
             try {
-                const temperatureResponse = await fetch('/api/temperature');
-                const temperatureData = await temperatureResponse.json();
-                document.querySelector('#temperature-card .data-value').textContent = `${temperatureData.value}°C`;
+                // Temperature
+                // const tempRes = await fetch('/api/temperature');
+                // const tempDataRes = await tempRes.json();
+                // const temp = parseFloat(tempDataRes.value);
+                // updateChart(temp);
 
-                const humidityResponse = await fetch('/api/humidity');
-                const humidityData = await humidityResponse.json();
-                document.querySelector('#humidity-card .data-value').textContent = `${humidityData.value}%`;
+                // Fan
+                const fanState = await fetchFanData();
 
-                // Example for LED status (assuming your backend provides this)
-                const ledStatusResponse = await fetch('/api/led/status');
-                const ledStatusData = await ledStatusResponse.json();
-                document.getElementById('led-status').textContent = `Status: ${ledStatusData.status}`;
+                // Light
+                const lightState = await fetchLightData();
+
+                // Door
+                const doorState = await fetchDoorData();
 
             } catch (error) {
-                console.error("Error fetching data:", error);
-                document.querySelector('#temperature-card .data-value').textContent = "Error loading";
-                document.querySelector('#humidity-card .data-value').textContent = "Error loading";
-                document.getElementById('led-status').textContent = "Error";
+                console.error("Fetch error:", error);
             }
         }
 
-        async function toggleLED() {
+        async function toggleDevice(device) {
             try {
-                const response = await fetch('/api/led/toggle', { method: 'POST' });
-                const result = await response.json();
-                if (result.status === 'success') {
-                    // Optionally update the LED status display
-                    fetchData(); // Re-fetch data to update status
-                } else {
-                    alert('Failed to toggle LED.');
+                await fetch(`/api/${device}/toggle`, { method: 'POST' });
+                const fetchFunction = {
+                    fan: fetchFanData,
+                    light: fetchLightData,
+                    door: fetchDoorData,
+                }[device];
+                if (fetchFunction) {
+                    await fetchFunction();
                 }
             } catch (error) {
-                console.error("Error toggling LED:", error);
-                alert('Error toggling LED.');
+                console.error(`Toggle error (${device}):`, error);
             }
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
-            fetchData(); // Load initial data
-            setInterval(fetchData, 5000); // Update data every 5 seconds
-            const toggleLedButton = document.getElementById('toggle-led-button');
-            if (toggleLedButton) {
-                toggleLedButton.addEventListener('click', toggleLED);
-            }
+        document.addEventListener('DOMContentLoaded', async () => {
+            const ctx = document.getElementById('tempChart').getContext('2d');
+            tempChart = new Chart(ctx, {
+                type: 'line',
+                data: tempData,
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: true } },
+                    scales: { y: { beginAtZero: true, min: 0, max: 100, ticks: { stepSize: 5 } } }
+                }
+            });
+
+            await fetchData();
+            setInterval(fetchData, 3000);
         });
+        
+        document.getElementById('fan-toggle').addEventListener('click', () => toggleDevice('fan'));
+        document.getElementById('light-toggle').addEventListener('click', () => toggleDevice('light'));
+        document.getElementById('door-toggle').addEventListener('click', () => toggleDevice('door'));
     </script>
 </body>
+
 </html>
