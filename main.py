@@ -3,11 +3,12 @@ import time
 import webbrowser
 import os
 
+port = 8081
 def run_flask_app():
     """Runs the Flask app in a separate process from the BE subdirectory."""
     try:
         app_path = os.path.join("BE", "app.py")
-        process = subprocess.Popen(['python', app_path])
+        process = subprocess.Popen(['python', app_path, '--port', str(port)])
         print("Flask app started in the background.")
         return process
     except FileNotFoundError:
@@ -17,7 +18,7 @@ def run_flask_app():
         print(f"Error starting Flask app: {e}")
         return None
 
-def open_browser(url="http://127.0.0.1:5000/"):
+def open_browser(url=f"http://127.0.0.1:{port}/"):
     """Opens the default web browser to the specified URL."""
     try:
         webbrowser.open_new_tab(url)

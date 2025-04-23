@@ -11,7 +11,7 @@
             font-family: Arial, sans-serif;
             background-color: #f4f4f4;
             padding: 20px;
-            max-width: 900px;
+            max-width: 1000px;
             margin: auto;
         }
 
@@ -33,23 +33,15 @@
             justify-content: space-between;
         }
 
-        .control-card,
-        .data-card {
+        .control-card {
             background: #fff;
             border-radius: 8px;
             padding: 15px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        }
-
-        .control-card {
             flex: 1 1 calc(33% - 10px);
             min-width: 250px;
-            box-sizing: border-box;
             text-align: center;
-        }
-
-        .data-card {
-            margin-top: 20px;
+            box-sizing: border-box;
         }
 
         .control-card button {
@@ -60,7 +52,6 @@
             color: #fff;
             cursor: pointer;
             margin-top: 10px;
-            transition: background-color 0.3s;
         }
 
         .on {
@@ -77,12 +68,39 @@
             font-size: 14px;
         }
 
+        .environmental-data {
+            margin-top: 30px;
+            background: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .chart-grid {
+            display: flex;
+            gap: 15px;
+            justify-content: space-between;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .chart-container {
+            flex: 1 1 calc(50% - 10px);
+            background: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
         canvas {
             max-width: 100%;
         }
 
         @media (max-width: 768px) {
-            .control-card {
+
+            .control-card,
+            .chart-container {
                 flex: 1 1 100%;
             }
         }
@@ -118,10 +136,24 @@
             </div>
         </div>
 
-        <!-- Temperature Chart -->
-        <div class="data-card">
-            <h2>Temperature Chart</h2>
-            <canvas id="tempChart"></canvas>
+
+        <div class="environmental-data">
+            <h2>Environmental Data</h2>
+            <p id="temp-display">Temperature: 28.5 °C</p>
+            <p id="humidity-display">Humidity: 60 %</p>
+            <p id="light-display">Light Intensity: 300 lx</p>
+        </div>
+
+        <div class="chart-grid">
+            <div class="chart-container">
+                <h2>Temperature Chart</h2>
+                <canvas id="tempChart"></canvas>
+            </div>
+
+            <div class="chart-container">
+                <h2>Light Intensity Chart</h2>
+                <canvas id="lightChart"></canvas>
+            </div>
         </div>
     </main>
 
@@ -130,17 +162,59 @@
     </footer>
 
     <script>
-        let tempChart;
-        const tempData = {
-            labels: [],
-            datasets: [{
-                label: 'Temperature (°C)',
-                data: [],
-                borderColor: '#007bff',
-                fill: false,
-                tension: 0.1
-            }]
-        };
+        const tempCtx = document.getElementById('tempChart').getContext('2d');
+        new Chart(tempCtx, {
+            type: 'line',
+            data: {
+                labels: ['', '', '', '', '', '', '', ''],
+                datasets: [{
+                    label: 'Temperature (°C)',
+                    data: [20, 21, 22, 24, 25, 23, 26, 25],
+                    borderColor: '#007bff',
+                    fill: false,
+                    tension: 0.3
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        min: 0,
+                        max: 30,
+                        ticks: {
+                            stepSize: 5
+                        }
+                    }
+                }
+            }
+        });
+
+        const lightCtx = document.getElementById('lightChart').getContext('2d');
+        new Chart(lightCtx, {
+            type: 'line',
+            data: {
+                labels: ['', '', '', '', '', '', '', ''],
+                datasets: [{
+                    label: 'Light Intensity (lx)',
+                    data: [100, 180, 240, 300, 200, 400, 320, 380],
+                    borderColor: '#ffc107',
+                    fill: false,
+                    tension: 0.3
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        min: 0,
+                        max: 400,
+                        ticks: {
+                            stepSize: 50
+                        }
+                    }
+                }
+            }
+        });
 
         function updateChart(temp) {
             const now = new Date().toLocaleTimeString();
@@ -153,6 +227,40 @@
             }
 
             tempChart.update();
+        }
+
+        async function updateEnvironmentalData() {
+            try {
+                // Initiate all fetches without waiting
+                const tempPromise = fetch('/api/temperature');
+                const humidityPromise = fetch('/api/humidity');
+                const lightPromise = fetch('/api/light');
+
+                // Wait for all promises to resolve
+                const [tempRes, humidityRes, lightRes] = await Promise.all([
+                    tempPromise,
+                    humidityPromise,
+                    lightPromise
+                ]);
+
+                // Parse JSON responses
+                const tempData = await tempRes.json();
+                const humidityData = await humidityRes.json();
+                const lightData = await lightRes.json();
+
+                // Extract values and update UI
+                const temperature = parseFloat(tempData.value).toFixed(1);
+                document.getElementById('temp-display').textContent = `Temperature: ${temperature} °C`;
+
+                const humidity = parseFloat(humidityData.value).toFixed(0);
+                document.getElementById('humidity-display').textContent = `Humidity: ${humidity} %`;
+
+                const lightIntensity = parseFloat(lightData.value).toFixed(0);
+                document.getElementById('light-display').textContent = `Light Intensity: ${lightIntensity} lx`;
+
+            } catch (error) {
+                console.error("Error fetching environmental data:", error);
+            }
         }
 
         async function fetchFanData() {
@@ -204,13 +312,13 @@
                 // updateChart(temp);
 
                 // Fan
-                const fanState = await fetchFanData();
+                const fanState = fetchFanData();
 
                 // Light
-                const lightState = await fetchLightData();
+                const lightState = fetchLightData();
 
                 // Door
-                const doorState = await fetchDoorData();
+                const doorState = fetchDoorData();
 
             } catch (error) {
                 console.error("Fetch error:", error);
@@ -234,21 +342,23 @@
         }
 
         document.addEventListener('DOMContentLoaded', async () => {
-            const ctx = document.getElementById('tempChart').getContext('2d');
-            tempChart = new Chart(ctx, {
-                type: 'line',
-                data: tempData,
-                options: {
-                    responsive: true,
-                    plugins: { legend: { display: true } },
-                    scales: { y: { beginAtZero: true, min: 0, max: 100, ticks: { stepSize: 5 } } }
-                }
-            });
+            // const ctx = document.getElementById('tempChart').getContext('2d');
+            // tempChart = new Chart(ctx, {
+            //     type: 'line',
+            //     data: tempData,
+            //     options: {
+            //         responsive: true,
+            //         plugins: { legend: { display: true } },
+            //         scales: { y: { beginAtZero: true, min: 0, max: 100, ticks: { stepSize: 5 } } }
+            //     }
+            // });
 
             await fetchData();
-            setInterval(fetchData, 3000);
+            await updateEnvironmentalData();
+            setInterval(fetchData, 5000);
+            setInterval(updateEnvironmentalData, 20000);
         });
-        
+
         document.getElementById('fan-toggle').addEventListener('click', () => toggleDevice('fan'));
         document.getElementById('light-toggle').addEventListener('click', () => toggleDevice('light'));
         document.getElementById('door-toggle').addEventListener('click', () => toggleDevice('door'));
