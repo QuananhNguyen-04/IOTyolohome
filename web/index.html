@@ -162,59 +162,44 @@
     </footer>
 
     <script>
-        const tempCtx = document.getElementById('tempChart').getContext('2d');
-        new Chart(tempCtx, {
-            type: 'line',
-            data: {
-                labels: ['', '', '', '', '', '', '', ''],
-                datasets: [{
-                    label: 'Temperature (°C)',
-                    data: [20, 21, 22, 24, 25, 23, 26, 25],
-                    borderColor: '#007bff',
-                    fill: false,
-                    tension: 0.3
-                }]
-            },
-            options: {
-                responsive: true,
-                scales: {
-                    y: {
-                        min: 0,
-                        max: 30,
-                        ticks: {
-                            stepSize: 5
-                        }
-                    }
-                }
-            }
-        });
+        var tempChart, lightChart;
 
-        const lightCtx = document.getElementById('lightChart').getContext('2d');
-        new Chart(lightCtx, {
-            type: 'line',
-            data: {
-                labels: ['', '', '', '', '', '', '', ''],
-                datasets: [{
-                    label: 'Light Intensity (lx)',
-                    data: [100, 180, 240, 300, 200, 400, 320, 380],
-                    borderColor: '#ffc107',
-                    fill: false,
-                    tension: 0.3
-                }]
-            },
-            options: {
-                responsive: true,
-                scales: {
-                    y: {
-                        min: 0,
-                        max: 400,
-                        ticks: {
-                            stepSize: 50
-                        }
-                    }
-                }
+        async function updateHistoricalCharts() {
+            try {
+                // Fetch historical temperature data
+                // const tempRes = await fetch('/api/historical/temperature');
+                const [tempRes, lightRes] = await Promise.all([
+                    fetch('/api/historical/temperature'),
+                    fetch('/api/historical/light')
+                ]);
+                const tempHistoricalData = await tempRes.json();
+
+                // Prepare data for the temperature chart
+                const tempLabels = tempHistoricalData.map(entry => new Date(entry.timestamp).toLocaleTimeString());
+                const tempData = tempHistoricalData.map(entry => entry.value);
+
+                // Update the temperature chart
+                tempChart.data.labels = tempLabels;
+                tempChart.data.datasets[0].data = tempData;
+
+                // Fetch historical light intensity data
+                // const lightRes = await fetch('/api/historical/light');
+                const lightHistoricalData = await lightRes.json();
+
+                // Prepare data for the light intensity chart
+                const lightLabels = lightHistoricalData.map(entry => new Date(entry.timestamp).toLocaleTimeString());
+                const lightData = lightHistoricalData.map(entry => entry.value);
+
+                // Update the light intensity chart
+                lightChart.data.labels = lightLabels;
+                lightChart.data.datasets[0].data = lightData;
+                tempChart.update();
+                lightChart.update();
+
+            } catch (error) {
+                console.error("Error fetching historical chart data:", error);
             }
-        });
+        }
 
         function updateChart(temp) {
             const now = new Date().toLocaleTimeString();
@@ -327,6 +312,8 @@
 
         async function toggleDevice(device) {
             try {
+                const toggleButton = document.getElementById(`${device}-toggle`);
+                if (toggleButton) toggleButton.disabled = true;
                 await fetch(`/api/${device}/toggle`, { method: 'POST' });
                 const fetchFunction = {
                     fan: fetchFanData,
@@ -338,9 +325,43 @@
                 }
             } catch (error) {
                 console.error(`Toggle error (${device}):`, error);
+            } finally {
+                const toggleButton = document.getElementById(`${device}-toggle`);
+                if (toggleButton) toggleButton.disabled = false;
             }
         }
+        async function updateHistoricalCharts() {
+            try {
+                // Fetch historical temperature data
+                const tempRes = await fetch('/api/historical/temperature');
+                const tempHistoricalData = await tempRes.json();
 
+                // Prepare data for the temperature chart
+                const tempLabels = tempHistoricalData.map(entry => new Date(entry.timestamp).toLocaleTimeString());
+                const tempData = tempHistoricalData.map(entry => entry.value);
+
+                // Update the temperature chart
+                tempChart.data.labels = tempLabels;
+                tempChart.data.datasets[0].data = tempData;
+                tempChart.update();
+
+                // Fetch historical light intensity data
+                const lightRes = await fetch('/api/historical/light');
+                const lightHistoricalData = await lightRes.json();
+
+                // Prepare data for the light intensity chart
+                const lightLabels = lightHistoricalData.map(entry => new Date(entry.timestamp).toLocaleTimeString());
+                const lightData = lightHistoricalData.map(entry => entry.value);
+
+                // Update the light intensity chart
+                lightChart.data.labels = lightLabels;
+                lightChart.data.datasets[0].data = lightData;
+                lightChart.update();
+
+            } catch (error) {
+                console.error("Error fetching historical chart data:", error);
+            }
+        }
         document.addEventListener('DOMContentLoaded', async () => {
             // const ctx = document.getElementById('tempChart').getContext('2d');
             // tempChart = new Chart(ctx, {
@@ -352,16 +373,132 @@
             //         scales: { y: { beginAtZero: true, min: 0, max: 100, ticks: { stepSize: 5 } } }
             //     }
             // });
+            const tempCtx = document.getElementById('tempChart').getContext('2d');
+            tempChart = new Chart(tempCtx, {
+                type: 'line',
+                data: {
+                    labels: [], // Initialize with empty labels
+                    datasets: [{
+                        label: 'Temperature (°C)',
+                        data: [], // Initialize with empty data
+                        borderColor: '#007bff',
+                        fill: false,
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    options: {
+                        responsive: true,
+                        scales: {
+                            x: {
+                                ticks: {
+                                    callback: function (value, index, values) {
+                                        const total = values.length;
+                                        const recentThreshold = 0.8; // last 20% show full time
 
-            await fetchData();
-            await updateEnvironmentalData();
-            setInterval(fetchData, 5000);
-            setInterval(updateEnvironmentalData, 20000);
+                                        const timestamp = new Date(this.getLabelForValue(value));
+                                        if (index / total >= recentThreshold) {
+                                            return timestamp.toLocaleTimeString(); // full time
+                                        } else {
+                                            return timestamp.getHours() + 'h'; // only hour
+                                        }
+                                    },
+                                    maxRotation: 45,
+                                    minRotation: 45
+                                }
+                            },
+
+                            y: {
+                                min: 10,
+                                max: 50,
+                                ticks: {
+                                    stepSize: 5
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            const lightCtx = document.getElementById('lightChart').getContext('2d');
+            lightChart = new Chart(lightCtx, {
+                type: 'line',
+                data: {
+                    labels: [], // Initialize with empty labels
+                    datasets: [{
+                        label: 'Light Intensity (lx)',
+                        data: [], // Initialize with empty data
+                        borderColor: '#ffc107',
+                        fill: false,
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    options: {
+                        responsive: true,
+                        scales: {
+                            x: {
+                                ticks: {
+                                    callback: function (value, index, values) {
+                                        const total = values.length;
+                                        const recentThreshold = 0.8; // last 20% show full time
+
+                                        const timestamp = new Date(this.getLabelForValue(value));
+                                        if (index / total >= recentThreshold) {
+                                            return timestamp.toLocaleTimeString(); // full time
+                                        } else {
+                                            return timestamp.getHours() + 'h'; // only hour
+                                        }
+                                    },
+                                    maxRotation: 45,
+                                    minRotation: 45
+                                }
+                            },
+                            y: {
+                                min: 0,
+                                max: 200,
+                                ticks: {
+                                    stepSize: 50
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            await Promise.all([fetchData(), updateEnvironmentalData()]);
+            updateHistoricalCharts();
+
+            // Fetch data and update charts/environmental data periodically
+            // setInterval(() => {
+            //     Promise.all([fetchData(), updateEnvironmentalData(), updateHistoricalCharts()]);
+            // }, 20000);
+            async function loopUpdate() {
+                const t0 = performance.now();
+                console.log(`[LOOP] Starting update at ${new Date().toISOString()}`);
+                await Promise.all([
+                    fetchData(),
+                    updateEnvironmentalData(),
+                    updateHistoricalCharts()
+                ]);
+                const t1 = performance.now();
+                console.log(`[LOOP] Finished update in ${Math.round(t1 - t0)}ms`);
+                setTimeout(loopUpdate, 20000); // Schedule next run after current one finishes
+            }
+            setTimeout(loopUpdate, 10000); // Initial delay before first run
         });
 
-        document.getElementById('fan-toggle').addEventListener('click', () => toggleDevice('fan'));
-        document.getElementById('light-toggle').addEventListener('click', () => toggleDevice('light'));
-        document.getElementById('door-toggle').addEventListener('click', () => toggleDevice('door'));
+        document.getElementById('fan-toggle').addEventListener('click', () => {
+            console.log('Fan button clicked');
+            toggleDevice('fan')
+        });
+        document.getElementById('light-toggle').addEventListener('click', () => {
+            console.log('Light button clicked');
+            toggleDevice('light')
+        });
+        document.getElementById('door-toggle').addEventListener('click', () => {
+            console.log('Door button clicked');
+            toggleDevice('door')
+        });
     </script>
 </body>
 

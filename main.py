@@ -31,7 +31,7 @@ if __name__ == "__main__":
 
     if flask_process:
         # Give the Flask app a little time to start up before opening the browser
-        time.sleep(5)  # Adjust this value if needed
+        time.sleep(10)  # Adjust this value if needed
 
         open_browser()
 
