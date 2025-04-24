@@ -232,15 +232,23 @@
                 const tempData = await tempRes.json();
                 const humidityData = await humidityRes.json();
                 const lightData = await lightRes.json();
-
                 // Extract values and update UI
                 const temperature = parseFloat(tempData.value).toFixed(1);
+                if (temperature > 50) {
+                    alert("DANGER! TOO HOT at temp:", temperature);
+                }
                 document.getElementById('temp-display').textContent = `Temperature: ${temperature} °C`;
 
                 const humidity = parseFloat(humidityData.value).toFixed(0);
+                if (humidity > 100) {
+                    alert("Sensor error: ", humidity);
+                }
                 document.getElementById('humidity-display').textContent = `Humidity: ${humidity} %`;
 
                 const lightIntensity = parseFloat(lightData.value).toFixed(0);
+                if (lightIntensity > 200) {
+                    alert("Light danger: ", lightIntensity);
+                }
                 document.getElementById('light-display').textContent = `Light Intensity: ${lightIntensity} lx`;
 
             } catch (error) {
