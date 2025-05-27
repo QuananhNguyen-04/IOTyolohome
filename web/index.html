@@ -120,9 +120,12 @@
             </div>
 
             <div class="control-card">
-                <h2>Cam</h2>
-                <p style="font-size: 40px;">📷</p>
-                <p class="status-text">Active</p>
+                <h2>Camera</h2>
+                <button id="camera-toggle" class="on" title="Toggle Camera">📷
+                </button>
+                <p class="status-text" id="camera-status">Camera: OFF</p>
+                <video id="camera-stream" autoplay playsinline
+                    style="display: none; margin-top: 10px; width: 100%; border-radius: 8px;"></video>
             </div>
         </div>
 
@@ -469,6 +472,36 @@
         document.getElementById('door-toggle').addEventListener('click', () => {
             console.log('Door button clicked');
             toggleDevice('door')
+        });
+        
+        // Camera
+        const cameraBtn = document.getElementById('camera-toggle');
+        const cameraStatus = document.getElementById('camera-status');
+        const cameraStream = document.getElementById('camera-stream');
+        let mediaStream = null;
+
+        cameraBtn.addEventListener('click', async function () {
+            if (mediaStream) {
+                // Tắt camera
+                mediaStream.getTracks().forEach(track => track.stop());
+                mediaStream = null;
+                cameraStream.style.display = 'none';
+                cameraStatus.textContent = 'Camera: OFF';
+                cameraBtn.classList.remove('off');
+                cameraBtn.classList.add('on');
+            } else {
+                try {
+                    mediaStream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    cameraStream.srcObject = mediaStream;
+                    cameraStream.style.display = 'block';
+                    cameraStatus.textContent = 'Camera: ON';
+                    cameraBtn.classList.remove('on');
+                    cameraBtn.classList.add('off');
+                } catch (error) {
+                    console.error('Could not access the camera:', error);
+                    cameraStatus.textContent = 'Camera access denied';
+                }
+            }
         });
     </script>
 </body>
