@@ -11,7 +11,7 @@
             font-family: Arial, sans-serif;
             background-color: #f4f4f4;
             padding: 20px;
-            max-width: 1000px;
+            max-width: 1200px;
             margin: auto;
         }
 
@@ -26,11 +26,17 @@
             color: #333;
         }
 
-        .device-grid {
-            display: flex;
+        .top-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
             gap: 15px;
-            flex-wrap: wrap;
-            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .bottom-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
         }
 
         .control-card {
@@ -38,10 +44,7 @@
             border-radius: 8px;
             padding: 15px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-            flex: 1 1 calc(33% - 10px);
-            min-width: 250px;
             text-align: center;
-            box-sizing: border-box;
         }
 
         .control-card button {
@@ -68,29 +71,13 @@
             font-size: 14px;
         }
 
+        .chart-container,
         .environmental-data {
-            margin-top: 30px;
             background: #fff;
             padding: 15px;
             border-radius: 8px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
             text-align: center;
-        }
-
-        .chart-grid {
-            display: flex;
-            gap: 15px;
-            justify-content: space-between;
-            margin-top: 20px;
-            flex-wrap: wrap;
-        }
-
-        .chart-container {
-            flex: 1 1 calc(50% - 10px);
-            background: #fff;
-            padding: 15px;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
         }
 
         canvas {
@@ -99,9 +86,9 @@
 
         @media (max-width: 768px) {
 
-            .control-card,
-            .chart-container {
-                flex: 1 1 100%;
+            .top-grid,
+            .bottom-grid {
+                grid-template-columns: 1fr;
             }
         }
     </style>
@@ -113,45 +100,47 @@
     </header>
 
     <main>
-        <div class="device-grid">
-            <!-- Fan Control -->
+        <div class="top-grid">
             <div class="control-card">
                 <h2>Fan</h2>
-                <button id="fan-toggle">Loading...</button>
-                <p class="status-text" id="fan-status">Status: ...</p>
+                <input type="range" id="fan-speed" min="1" max="100" value="50">
+                <p class="status-text" id="fan-status">Fan Speed: 50%</p>
             </div>
 
-            <!-- Light Control -->
             <div class="control-card">
                 <h2>Light</h2>
-                <button id="light-toggle">Loading...</button>
-                <p class="status-text" id="light-status">Status: ...</p>
+                <button id="light-toggle" class="on">Turn OFF Light</button>
+                <p class="status-text" id="light-status">Status: ON</p>
             </div>
 
-            <!-- Door Control -->
             <div class="control-card">
                 <h2>Door</h2>
-                <button id="door-toggle">Loading...</button>
-                <p class="status-text" id="door-status">Status: ...</p>
+                <button id="door-toggle" class="off">Open Door</button>
+                <p class="status-text" id="door-status">Status: OFF</p>
+            </div>
+
+            <div class="control-card">
+                <h2>Cam</h2>
+                <p style="font-size: 40px;">📷</p>
+                <p class="status-text">Active</p>
             </div>
         </div>
 
+        <div class="bottom-grid">
+            <div class="environmental-data">
+                <h2>Environmental Data</h2>
+                <p id="temp-display">Temperature: 28.5 °C</p>
+                <p id="humidity-display">Humidity: 60 %</p>
+                <p id="light-display">Light Intensity: 300 lx</p>
+            </div>
 
-        <div class="environmental-data">
-            <h2>Environmental Data</h2>
-            <p id="temp-display">Temperature: 28.5 °C</p>
-            <p id="humidity-display">Humidity: 60 %</p>
-            <p id="light-display">Light Intensity: 300 lx</p>
-        </div>
-
-        <div class="chart-grid">
             <div class="chart-container">
-                <h2>Temperature Chart</h2>
+                <h2>Temp Chart</h2>
                 <canvas id="tempChart"></canvas>
             </div>
 
             <div class="chart-container">
-                <h2>Light Intensity Chart</h2>
+                <h2>Light Chart</h2>
                 <canvas id="lightChart"></canvas>
             </div>
         </div>
@@ -234,21 +223,21 @@
                 const lightData = await lightRes.json();
                 // Extract values and update UI
                 const temperature = parseFloat(tempData.value).toFixed(1);
-                if (temperature > 50) {
-                    alert("DANGER! TOO HOT at temp:", temperature);
-                }
+                // if (temperature > 50) {
+                //     alert("DANGER! TOO HOT at temp:", temperature);
+                // }
                 document.getElementById('temp-display').textContent = `Temperature: ${temperature} °C`;
 
                 const humidity = parseFloat(humidityData.value).toFixed(0);
-                if (humidity > 100) {
-                    alert("Sensor error: ", humidity);
-                }
+                // if (humidity > 100) {
+                //     alert("Sensor error: ", humidity);
+                // }
                 document.getElementById('humidity-display').textContent = `Humidity: ${humidity} %`;
 
                 const lightIntensity = parseFloat(lightData.value).toFixed(0);
-                if (lightIntensity > 200) {
-                    alert("Light danger: ", lightIntensity);
-                }
+                // if (lightIntensity > 200) {
+                //     alert("Light danger: ", lightIntensity);
+                // }
                 document.getElementById('light-display').textContent = `Light Intensity: ${lightIntensity} lx`;
 
             } catch (error) {
@@ -260,11 +249,9 @@
             try {
                 const fanStatus = await fetch('/api/fan/status');
                 const fanData = await fanStatus.json();
-                const fanState = fanData.value;
-                const fanBtn = document.getElementById('fan-toggle');
-                fanBtn.textContent = fanState === 'ON' ? 'Turn OFF Fan' : 'Turn ON Fan';
-                fanBtn.className = fanState === 'ON' ? 'on' : 'off';
-                document.getElementById('fan-status').textContent = `Status: ${fanState}`;
+                const fanSpeed = fanData.value;
+                document.getElementById('fan-speed').value = fanSpeed; // Assuming 100% speed when ON
+                document.getElementById('fan-status').textContent = `Fan Speed: ${fanSpeed}%`;
             } catch (error) {
                 console.error("Fetch error:", error);
             }
@@ -318,13 +305,25 @@
             }
         }
 
+        async function sendFanSpeed(speed) {
+            try {
+                const fanSpeed = parseInt(speed, 10);
+                await fetch('/api/fan/speed', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ speed: fanSpeed })
+                });
+                document.getElementById('fan-status').textContent = `Fan Speed: ${fanSpeed}%`;
+            } catch (error) {
+                console.error("Error sending fan speed:", error);
+            }
+        }
         async function toggleDevice(device) {
             try {
                 const toggleButton = document.getElementById(`${device}-toggle`);
                 if (toggleButton) toggleButton.disabled = true;
                 await fetch(`/api/${device}/toggle`, { method: 'POST' });
                 const fetchFunction = {
-                    fan: fetchFanData,
                     light: fetchLightData,
                     door: fetchDoorData,
                 }[device];
@@ -395,33 +394,13 @@
                     }]
                 },
                 options: {
-                    options: {
-                        responsive: true,
-                        scales: {
-                            x: {
-                                ticks: {
-                                    callback: function (value, index, values) {
-                                        const total = values.length;
-                                        const recentThreshold = 0.8; // last 20% show full time
-
-                                        const timestamp = new Date(this.getLabelForValue(value));
-                                        if (index / total >= recentThreshold) {
-                                            return timestamp.toLocaleTimeString(); // full time
-                                        } else {
-                                            return timestamp.getHours() + 'h'; // only hour
-                                        }
-                                    },
-                                    maxRotation: 45,
-                                    minRotation: 45
-                                }
-                            },
-
-                            y: {
-                                min: 10,
-                                max: 50,
-                                ticks: {
-                                    stepSize: 5
-                                }
+                    responsive: true,
+                    scales: {
+                        y: {
+                            min: 10,
+                            max: 50,
+                            ticks: {
+                                stepSize: 5
                             }
                         }
                     }
@@ -442,32 +421,13 @@
                     }]
                 },
                 options: {
-                    options: {
-                        responsive: true,
-                        scales: {
-                            x: {
-                                ticks: {
-                                    callback: function (value, index, values) {
-                                        const total = values.length;
-                                        const recentThreshold = 0.8; // last 20% show full time
-
-                                        const timestamp = new Date(this.getLabelForValue(value));
-                                        if (index / total >= recentThreshold) {
-                                            return timestamp.toLocaleTimeString(); // full time
-                                        } else {
-                                            return timestamp.getHours() + 'h'; // only hour
-                                        }
-                                    },
-                                    maxRotation: 45,
-                                    minRotation: 45
-                                }
-                            },
-                            y: {
-                                min: 0,
-                                max: 200,
-                                ticks: {
-                                    stepSize: 50
-                                }
+                    responsive: true,
+                    scales: {
+                        y: {
+                            min: 0,
+                            max: 400,
+                            ticks: {
+                                stepSize: 50
                             }
                         }
                     }
@@ -495,9 +455,12 @@
             setTimeout(loopUpdate, 10000); // Initial delay before first run
         });
 
-        document.getElementById('fan-toggle').addEventListener('click', () => {
-            console.log('Fan button clicked');
-            toggleDevice('fan')
+        document.getElementById('fan-speed').addEventListener('input', (event) => {
+            const speed = event.target.value;
+            console.log(`Fan speed set to ${speed}%`);
+            document.getElementById('fan-status').textContent = `Fan Speed: ${speed}%`;
+            // Optionally debounce if updates are frequent
+            sendFanSpeed(speed);
         });
         document.getElementById('light-toggle').addEventListener('click', () => {
             console.log('Light button clicked');

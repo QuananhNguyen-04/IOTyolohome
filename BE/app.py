@@ -156,6 +156,20 @@ def toggle_fan():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route("/api/fan/speed", methods=["POST"])
+def set_fan_speed():
+    try:
+        data = request.get_json()
+        speed = int(data.get("speed", 0))
+
+        if not (1 <= speed <= 100):
+            return jsonify({"error": "Speed must be between 1 and 100"}), 400
+
+        aio.send(FAN_FEED_NAME, speed)
+
+        return jsonify({"status": "success", "new_speed": speed})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route("/api/door/toggle", methods=["POST"])
 def toggle_door():
